@@ -1,5 +1,6 @@
 # Step 1: Build the application
 FROM gradle:8.10.2-jdk21 AS build
+WORKDIR /app
 
 # Copy Gradle wrapper and build files first (for caching)
 COPY build.gradle settings.gradle gradlew ./
@@ -16,9 +17,10 @@ RUN ./gradlew bootJar --no-daemon
 
 # Step 2: Run the application
 FROM eclipse-temurin:21-jdk-jammy
+WORKDIR /app
 
 # Copy JAR from build stage
-COPY --from=build /build/libs/*.jar app.jar
+COPY --from=build /app/build/libs/*.jar app.jar
 
 # Expose port
 EXPOSE 8080

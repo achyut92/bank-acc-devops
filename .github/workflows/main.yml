@@ -1,0 +1,47 @@
+name: Build, Test, Dockerize, Push to ECR
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  AWS_REGION: ap-southeast-1                # Change to your AWS region
+  ECR_REPOSITORY: bank-app                  # Change to your ECR repo name
+  IMAGE_TAG: latest                         # Or use github.sha for unique tags
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Setup Java
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # Cache Gradle dependencies
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # Run tests
+      - name: Run JUnit tests
+        run: ./bank-app/gradlew clean test
+
+      # Build JAR
+      - name: Build application JAR
+        run: ./bank-app/gradlew bootJar

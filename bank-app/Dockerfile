@@ -18,7 +18,7 @@ RUN ./gradlew bootJar --no-daemon
 FROM eclipse-temurin:21-jdk-jammy
 
 # Copy JAR from build stage
-COPY --from=build /app/build/libs/*.jar app.jar
+COPY --from=build /build/libs/*.jar app.jar
 
 # Expose port
 EXPOSE 8080

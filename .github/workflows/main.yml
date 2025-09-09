@@ -45,7 +45,9 @@ jobs:
       # Run tests
       - name: Run JUnit tests
         run: ./gradlew clean test
-
-      # Build JAR
-      - name: Build application JAR
-        run: ./gradlew bootJar
+      
+      - name: Build, tag, and push Docker image to ECR
+        run: |
+          IMAGE_URI='bank-app'
+          echo "Building Docker image: $IMAGE_URI"
+          docker build -t $IMAGE_URI .

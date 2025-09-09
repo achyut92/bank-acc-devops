@@ -15,6 +15,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: bank-app
+
     steps:
       # Checkout code
       - name: Checkout repository
@@ -32,16 +36,16 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            ~/bank-app/.gradle/caches
-            ~/bank-app/.gradle/wrapper
+            ~/.gradle/caches
+            ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
       # Run tests
       - name: Run JUnit tests
-        run: ./bank-app/gradlew clean test
+        run: ./gradlew clean test
 
       # Build JAR
       - name: Build application JAR
-        run: ./bank-app/gradlew bootJar
+        run: ./gradlew bootJar

@@ -1,7 +1,5 @@
 name: Build, Test, Dockerize, Push to ECR
 
-on: 
-
 on:
   workflow_dispatch:
   pull_request:

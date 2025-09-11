@@ -1,15 +1,18 @@
 name: Build, Test, Dockerize, Push to ECR
 
+on: 
+
 on:
-  push:
-    branches: ["main"]
+  workflow_dispatch:
   pull_request:
     branches: [ "main" ]
 
 env:
-  AWS_REGION: ap-southeast-1                # Change to your AWS region
-  ECR_REPOSITORY: bank-app                  # Change to your ECR repo name
-  IMAGE_TAG: latest                         # Or use github.sha for unique tags
+  AWS_REGION: ap-southeast-1
+  ECR_REPOSITORY: bank-app-repo
+  IMAGE_TAG: latest
+  CLUSTER_NAME: bank-app-cluster
+  KUBE_NAMESPACE: bank-app
 
 jobs:
   build:
@@ -45,10 +48,48 @@ jobs:
       # Run tests
       - name: Run JUnit tests
         run: ./gradlew clean test
+
+      # Setup AWS profile  
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Login to AWS ECR  
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
       
-      # Dockerize the app
-      - name: Build, tag, and push Docker image to ECR
+      # Build and push docker image
+      - name: Build Docker image
         run: |
-          IMAGE_URI='bank-app'
-          echo "Building Docker image: $IMAGE_URI"
-          docker build -t $IMAGE_URI .
+          docker build -t $ECR_REPO:latest .
+          docker tag $ECR_REPO:latest ${{ steps.login-ecr.outputs.registry }}/$ECR_REPO:latest
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPO:latest
+      
+      # Deploy to EKS
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+      
+      # Add external secrets
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.12.0
+
+      - name: Install External Secrets Operator
+        run: |
+          helm repo add external-secrets https://charts.external-secrets.io
+          helm repo update
+          helm upgrade --install external-secrets external-secrets/external-secrets \
+            --namespace $KUBE_NAMESPACE --create-namespace
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f bank-app/k8s/
